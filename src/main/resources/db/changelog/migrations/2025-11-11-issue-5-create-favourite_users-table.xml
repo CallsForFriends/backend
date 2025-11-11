@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd">
+
+    <changeSet id="issue-5-favourite_users" author="Kkkkkk58">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="favourite_users"/>
+            </not>
+        </preConditions>
+        <sql>
+            <![CDATA[
+            create table favourite_users
+            (
+                id                bigserial                 primary key,
+                user_id           int                       not null,
+                favourite_user_id int                       not null,
+                created_at        timestamptz default now() not null
+            );
+            ]]>
+        </sql>
+        <rollback>
+            <dropTable tableName="favourite_users"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="issue-5-unq_favourite_users_user_id_favourite_user_id" author="Kkkkkk58" runInTransaction="false">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <indexExists tableName="favourite_users" indexName="unq_favourite_users_user_id_favourite_user_id"/>
+            </not>
+        </preConditions>
+        <createIndex tableName="favourite_users" indexName="unq_favourite_users_user_id_favourite_user_id" unique="true">
+            <column name="user_id"/>
+            <column name="favourite_user_id"/>
+        </createIndex>
+        <rollback>
+            <dropIndex tableName="favourite_users" indexName="unq_favourite_users_user_id_favourite_user_id"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="issue-5-favourite_users-comments" author="Kkkkkk58">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="favourite_users"/>
+        </preConditions>
+        <sql>
+            <![CDATA[
+            comment on table favourite_users is 'Избранные пользователи';
+
+            comment on column favourite_users.id is 'Идентификатор записи';
+            comment on column favourite_users.user_id is 'Идентификатор пользователя';
+            comment on column favourite_users.favourite_user_id is 'Идентификатор избранного пользователя';
+            comment on column favourite_users.created_at is 'Дата и время добавления избранного пользователя';
+            ]]>
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

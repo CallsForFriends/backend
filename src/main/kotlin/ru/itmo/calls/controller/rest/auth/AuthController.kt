@@ -38,21 +38,26 @@ class AuthController(
             throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials")
         }
 
+        // Получаем userId после успешной аутентификации
+        val userId = itmoAdapter.getUserIdAfterLogin(request.login, request.password)
+            ?: throw ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to get user ID")
+
         // Проверяем, есть ли уже токен для этого пользователя
         val existingToken = tokenService.findTokenByLogin(request.login)
 
         val token = if (existingToken != null) {
-            // Если токен уже существует, обновляем пароль (на случай если он изменился)
+            // Если токен уже существует, обновляем пароль и userId (на случай если они изменились)
             val tokenInfo = tokenService.getTokenInfo(existingToken)
             if (tokenInfo != null) {
-                // Обновляем пароль в существующем токене
+                // Обновляем пароль и userId в существующем токене
                 tokenInfo.password = request.password
+                tokenInfo.userId = userId
             }
             existingToken
         } else {
             // Если токена нет, создаем новый
             tokenService.generateToken(
-                userId = request.login, // Используем login как userId
+                userId = userId,
                 login = request.login,
                 password = request.password
             )

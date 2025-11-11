@@ -9,7 +9,7 @@ class TokenService {
     private val tokens: MutableMap<String, TokenInfo> = ConcurrentHashMap()
 
     data class TokenInfo(
-        val userId: String,
+        var userId: Int,
         val login: String,
         var password: String, // var для возможности обновления пароля
         val createdAt: Long = System.currentTimeMillis(),
@@ -17,7 +17,7 @@ class TokenService {
         var refreshTokenExpiresAt: Long? = null
     )
 
-    fun generateToken(userId: String, login: String, password: String): String {
+    fun generateToken(userId: Int, login: String, password: String): String {
         val token = UUID.randomUUID().toString()
         tokens[token] = TokenInfo(userId, login, password)
         return token

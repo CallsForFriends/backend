@@ -31,7 +31,7 @@ class TokenAuthenticationFilter(
             if (tokenInfo != null) {
                 val authorities = listOf(SimpleGrantedAuthority("ROLE_USER"))
                 val authentication = UsernamePasswordAuthenticationToken(
-                    tokenInfo.login,
+                    tokenInfo.userId, // Сохраняем userId в principal для использования в SecurityAdapter
                     token, // Сохраняем токен в credentials для последующего использования
                     authorities
                 ).apply {

@@ -15,7 +15,6 @@ import java.util.concurrent.ConcurrentHashMap
 @Service
 class MyItmoAdapter(
     private val myItmoProvider: ObjectProvider<MyItmo>,
-    private val myItmo: MyItmo,
     private val tokenService: TokenService
 ) : UserInfoProvider {
     companion object {
@@ -40,6 +39,30 @@ class MyItmoAdapter(
         }
     }
 
+    /**
+     * Получает userId текущего пользователя после успешной аутентификации
+     * @param username логин пользователя
+     * @param password пароль пользователя
+     * @return userId пользователя или null, если не удалось получить
+     */
+    fun getUserIdAfterLogin(username: String, password: String): Int? {
+        return try {
+            val myItmo = createMyItmo()
+            myItmo.auth(username, password)
+            // Пытаемся получить userId через поиск пользователя по логину
+            // Используем searchPersonalities с фильтром по логину
+            val result = executeRequest {
+                myItmo.api().searchPersonalities(1, 0, username)
+            }
+            // Возвращаем id первого найденного пользователя (преобразуем Long в Int)
+            result?.data?.firstOrNull()?.id?.toInt()
+        } catch (e: Exception) {
+            // Если не удалось получить через поиск, возвращаем null
+            // В этом случае можно будет использовать fallback значение или другой способ
+            null
+        }
+    }
+
     fun findUserById(id: Int): String {
         val myItmo = getAuthenticatedMyItmo()
         val result = myItmo.api().getPersonality(id).execute().body()!!.result
@@ -51,6 +74,7 @@ class MyItmoAdapter(
     }
 
     override fun getUserInfo(userIds: List<Int>): List<UserInfo> {
+        val myItmo = getAuthenticatedMyItmo()
         val filterString = userIds.joinToString(USER_SEPARATOR)
         val result = executeRequest {
             myItmo.api().searchPersonalities(userIds.size, 0, filterString)

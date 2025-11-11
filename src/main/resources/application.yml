@@ -1,3 +1,16 @@
 spring:
   application:
     name: itmocalls
+  datasource:
+    type: com.zaxxer.hikari.HikariDataSource
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:${PostgresDbServerUri}
+    username: ${PostgresDbUser}
+    password: ${PostgresDbPassword}
+    hikari:
+      minimum-idle: 5
+      connection-timeout: 10000
+      pool-name: pg-main-pool
+  liquibase:
+    enabled: true
+    change-log: classpath:/db/changelog/db.changelog-master.xml

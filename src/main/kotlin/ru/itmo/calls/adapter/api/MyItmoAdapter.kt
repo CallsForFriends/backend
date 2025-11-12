@@ -25,8 +25,9 @@ class MyItmoAdapter(
     }
 
     private val log = KotlinLogging.logger { }
-
     private val myItmoCache: MutableMap<String, MyItmo> = ConcurrentHashMap()
+    private val myItmo
+        get() = getAuthenticatedMyItmo()
 
     private fun createMyItmo(): MyItmo {
         return myItmoProvider.getObject()
@@ -35,9 +36,9 @@ class MyItmoAdapter(
     fun login(username: String, password: String): Boolean {
         return try {
             // Создаем новый экземпляр MyItmo для проверки
-            val myItmo = createMyItmo()
+            val createdMyItmo = createMyItmo()
             // Используем auth() для проверки, как указано в требованиях
-            myItmo.auth(username, password)
+            createdMyItmo.auth(username, password)
             true
         } catch (e: Exception) {
             false
@@ -52,12 +53,12 @@ class MyItmoAdapter(
      */
     fun getUserIdAfterLogin(username: String, password: String): Int? {
         return try {
-            val myItmo = createMyItmo()
-            myItmo.auth(username, password)
+            val loggedMyItmo = createMyItmo()
+            loggedMyItmo.auth(username, password)
             // Пытаемся получить userId через поиск пользователя по логину
             // Используем searchPersonalities с фильтром по логину
             val result = executeRequest {
-                myItmo.api().searchPersonalities(1, 0, username)
+                loggedMyItmo.api().searchPersonalities(1, 0, username)
             }
             // Возвращаем id первого найденного пользователя (преобразуем Long в Int)
             result?.data?.firstOrNull()?.id?.toInt()
@@ -66,6 +67,7 @@ class MyItmoAdapter(
             // В этом случае можно будет использовать fallback значение или другой способ
             null
         }
+    }
 
     override fun getUserInfo(id: Int): UserInfo {
         val result = executeRequest {
@@ -104,6 +106,10 @@ class MyItmoAdapter(
         return response.body()?.result
     }
 
+    fun removeMyItmo(token: String) {
+        myItmoCache.remove(token)
+    }
+
     /**
      * Получает аутентифицированный MyItmo экземпляр для текущего пользователя.
      * Если токен пользователя уже есть в системе, просто возвращает кэшированный экземпляр
@@ -121,7 +127,7 @@ class MyItmoAdapter(
 
         // Получаем или создаем MyItmo экземпляр для этого токена (кэширование)
         // При первом создании MyItmo для токена вызывается auth() через computeIfAbsent
-        val myItmo = myItmoCache.computeIfAbsent(token) {
+        val authenticatedMyItmo = myItmoCache.computeIfAbsent(token) {
             val newMyItmo = createMyItmo()
             // При первом создании вызываем auth для установки сессии
             newMyItmo.auth(tokenInfo.login, tokenInfo.password)
@@ -130,7 +136,7 @@ class MyItmoAdapter(
 
         // Если токен есть в системе, просто возвращаем кэшированный MyItmo
         // без повторного вызова auth()
-        return myItmo
+        return authenticatedMyItmo
     }
 }
 

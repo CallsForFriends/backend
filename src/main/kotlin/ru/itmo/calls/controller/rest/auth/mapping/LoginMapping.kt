@@ -5,7 +5,6 @@ import ru.itmo.calls.port.model.LoginResult
 
 fun LoginResult.toResponse(): LoginResponse {
     return LoginResponse(
-        accessToken = accessToken,
-        refreshToken = refreshToken,
+        authToken = accessToken
     )
 }

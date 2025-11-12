@@ -15,7 +15,7 @@ class GetFavouriteUsersUseCase(
     fun get(): GetFavouriteUsersResult {
         val userId = authProvider.getCurrentUserId()
         val favouriteUserIds = favouriteUsersProvider.getFavouriteUsersByUserId(userId).map { it.favouriteUserId }
-        val userInfos = userInfoProvider.getUserInfo(favouriteUserIds)
+        val userInfos = userInfoProvider.findUserInfoByIds(favouriteUserIds)
 
         return GetFavouriteUsersResult(userInfos)
     }

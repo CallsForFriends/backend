@@ -11,6 +11,7 @@ import ru.itmo.calls.adapter.security.MyItmoAuthAdapter
 import ru.itmo.calls.domain.exception.UserNotFoundException
 import ru.itmo.calls.domain.user.UserInfo
 import ru.itmo.calls.port.UserInfoProvider
+import ru.itmo.calls.port.model.PagedCollection
 
 @Service
 class MyItmoAdapter(
@@ -37,19 +38,24 @@ class MyItmoAdapter(
             filter = userIds.joinToString(USER_SEPARATOR),
             limit = userIds.size,
             offset = 0
-        )
+        ).collection.toList()
     }
 
-    override fun findUserInfoByFilter(filter: String, limit: Int, offset: Int): List<UserInfo> {
+    override fun findUserInfoByFilter(filter: String, limit: Int, offset: Int): PagedCollection<UserInfo> {
         if (limit == 0) {
-            return emptyList()
+            return PagedCollection.empty(limit, offset)
         }
 
         val result = executeRequest {
             myItmo.api().searchPersonalities(limit, offset, filter)
         }
 
-        return result?.data?.map { it.toUserInfo() } ?: emptyList()
+        return PagedCollection(
+            limit = limit,
+            offset = offset,
+            total = result?.count ?: 0,
+            collection = result?.data?.map { it.toUserInfo() } ?: emptyList()
+        )
     }
 
     @Deprecated(message = "remove after parsing token implementation")

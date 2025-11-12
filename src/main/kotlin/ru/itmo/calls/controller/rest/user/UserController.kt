@@ -51,6 +51,6 @@ class UserController(
             filter = filter
         )
 
-        return findUsersByFilterUseCase.find(command).toResponse(limit, offset)
+        return findUsersByFilterUseCase.find(command).toResponse()
     }
 }

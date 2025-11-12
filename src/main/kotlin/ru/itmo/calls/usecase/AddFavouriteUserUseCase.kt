@@ -1,5 +1,9 @@
 package ru.itmo.calls.usecase
 
+import mu.KotlinLogging
+import org.springframework.dao.DuplicateKeyException
+import org.springframework.retry.annotation.Backoff
+import org.springframework.retry.annotation.Retryable
 import org.springframework.stereotype.Service
 import ru.itmo.calls.domain.user.FavouriteUser
 import ru.itmo.calls.port.AuthProvider
@@ -13,6 +17,15 @@ class AddFavouriteUserUseCase(
     private val favouriteUsersProvider: FavouriteUsersProvider,
     private val transactionProvider: TransactionProvider,
 ) {
+    private val log = KotlinLogging.logger { }
+
+    @Retryable(
+        maxAttempts = 3,
+        include = [
+            DuplicateKeyException::class
+        ],
+        backoff = Backoff(random = true, delay = 100, maxDelay = 300)
+    )
     fun add(command: AddFavouriteUserCommand) {
         val userId = authProvider.getCurrentUserId()
         val favouriteUser = FavouriteUser(
@@ -28,7 +41,7 @@ class AddFavouriteUserUseCase(
     private fun addFavouriteUserInternal(favouriteUser: FavouriteUser) {
         val connectionExists = favouriteUsersProvider.exists(favouriteUser)
         if (connectionExists) {
-            // TODO: log
+            log.info { "[FAVOURITES][UserId:${favouriteUser.userId}][Favourite:${favouriteUser.favouriteUserId}] Connection already exists, skipping" }
             return
         }
 

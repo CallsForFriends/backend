@@ -1,18 +1,47 @@
 package ru.itmo.calls.controller.rest.user
 
+import jakarta.validation.constraints.PositiveOrZero
+import org.hibernate.validator.constraints.Range
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
-import ru.itmo.calls.adapter.api.MyItmoAdapter
+import ru.itmo.calls.controller.rest.user.mapping.toResponse
+import ru.itmo.calls.controller.rest.user.models.FindUserByIdResponse
+import ru.itmo.calls.controller.rest.user.models.FindUsersByFilterResponse
+import ru.itmo.calls.usecase.FindUserByIdUseCase
+import ru.itmo.calls.usecase.FindUsersByFilterUseCase
+import ru.itmo.calls.usecase.model.FindUserByIdCommand
+import ru.itmo.calls.usecase.model.FindUsersByFilterCommand
 
 @RestController
 @RequestMapping("/api/v1/users")
 class UserController(
-    private val itmoAdapter: MyItmoAdapter
+    private val findUserByIdUseCase: FindUserByIdUseCase,
+    private val findUsersByFilterUseCase: FindUsersByFilterUseCase
 ) {
     @GetMapping("/{id}")
-    fun find(@PathVariable id: Int): String {
-        return itmoAdapter.findUserById(id)
+    fun findById(@PathVariable id: Int): FindUserByIdResponse {
+        val command = FindUserByIdCommand(id)
+        return findUserByIdUseCase.find(command).toResponse()
+    }
+
+    @GetMapping
+    fun findByFilter(
+        @RequestParam(defaultValue = "0") @Range(min = 0, max = 10000)
+        limit: Int,
+        @RequestParam(defaultValue = "0") @PositiveOrZero
+        offset: Int,
+        @RequestParam
+        filter: String,
+    ): FindUsersByFilterResponse {
+        val command = FindUsersByFilterCommand(
+            limit = limit,
+            offset = offset,
+            filter = filter
+        )
+
+        return findUsersByFilterUseCase.find(command).toResponse(limit, offset)
     }
 }

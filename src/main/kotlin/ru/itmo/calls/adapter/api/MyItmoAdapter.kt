@@ -2,11 +2,14 @@ package ru.itmo.calls.adapter.api
 
 import api.myitmo.MyItmo
 import api.myitmo.model.ResultResponse
+import api.myitmo.model.personality.Personality
 import api.myitmo.model.personality.PersonalityMin
+import mu.KotlinLogging
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Service
 import retrofit2.Call
+import ru.itmo.calls.domain.exception.UserNotFoundException
 import ru.itmo.calls.domain.user.UserInfo
 import ru.itmo.calls.port.UserInfoProvider
 import ru.itmo.calls.service.TokenService
@@ -20,6 +23,8 @@ class MyItmoAdapter(
     companion object {
         private const val USER_SEPARATOR = "|"
     }
+
+    private val log = KotlinLogging.logger { }
 
     private val myItmoCache: MutableMap<String, MyItmo> = ConcurrentHashMap()
 
@@ -61,36 +66,42 @@ class MyItmoAdapter(
             // В этом случае можно будет использовать fallback значение или другой способ
             null
         }
-    }
 
-    fun findUserById(id: Int): String {
-        val myItmo = getAuthenticatedMyItmo()
-        val result = myItmo.api().getPersonality(id).execute().body()!!.result
-        return result.fio
-    }
-
-    fun removeMyItmo(token: String) {
-        myItmoCache.remove(token)
-    }
-
-    override fun getUserInfo(userIds: List<Int>): List<UserInfo> {
-        val myItmo = getAuthenticatedMyItmo()
-        val filterString = userIds.joinToString(USER_SEPARATOR)
+    override fun getUserInfo(id: Int): UserInfo {
         val result = executeRequest {
-            myItmo.api().searchPersonalities(userIds.size, 0, filterString)
+            myItmo.api().getPersonality(id)
         }
 
-        return result?.data?.map { it.toUserInfo() } ?: emptyList()
+        return result?.toUserInfo() ?: throw UserNotFoundException.forUserId(id)
     }
 
+    override fun findUserInfoByIds(userIds: List<Int>): List<UserInfo> {
+        return findUserInfoByFilter(
+            filter = userIds.joinToString(USER_SEPARATOR),
+            limit = userIds.size,
+            offset = 0
+        )
+    }
+
+    override fun findUserInfoByFilter(filter: String, limit: Int, offset: Int): List<UserInfo> {
+        if (limit == 0) {
+            return emptyList()
+        }
+
+        val result = executeRequest {
+            myItmo.api().searchPersonalities(limit, offset, filter)
+        }
+
+        return result?.data?.map { it.toUserInfo() } ?: emptyList()    }
+
     private fun <T> executeRequest(requestProvider: () -> Call<ResultResponse<T>>): T? {
-        val responseBody = requestProvider().execute().body()
-        if (responseBody == null) {
-            // TODO log
+        val response = requestProvider().execute()
+        if (!response.isSuccessful) {
+            log.error("[ITMO API] Request failed with status ${response.code()}: ${response.message()}. ${response.errorBody()?.string()}")
             return null
         }
 
-        return responseBody.result
+        return response.body()?.result
     }
 
     /**
@@ -121,6 +132,14 @@ class MyItmoAdapter(
         // без повторного вызова auth()
         return myItmo
     }
+}
+
+private fun Personality.toUserInfo(): UserInfo {
+    return UserInfo(
+        userId = isu,
+        fullName = fio,
+        photoUrl = photoUrl,
+    )
 }
 
 private fun PersonalityMin.toUserInfo(): UserInfo {

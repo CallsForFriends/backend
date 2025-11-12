@@ -1,5 +1,6 @@
 package ru.itmo.calls.usecase
 
+import mu.KotlinLogging
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
@@ -15,6 +16,8 @@ class LoginUseCase(
     private val userInfoProvider: UserInfoProvider,
     private val tokenService: TokenService
 ) {
+    private val log = KotlinLogging.logger { }
+
     fun login(command: LoginCommand): LoginResult {
         val (login, password) = command
         val authResult = authProvider.login(login, password)
@@ -57,7 +60,9 @@ class LoginUseCase(
             val loggedMyItmo = authProvider.createMyItmo()
             loggedMyItmo.auth(username, password)
 
-            return userInfoProvider.getUserInfo(username.toInt()).userId.toInt()
+            return userInfoProvider.getUserInfo(username.toInt(), loggedMyItmo).userId.toInt()
+        }.onFailure {
+            log.error(it) { "[LOGIN] Failed to get user ID after login. Reason: ${it.message}" }
         }.getOrNull()
     }
 }

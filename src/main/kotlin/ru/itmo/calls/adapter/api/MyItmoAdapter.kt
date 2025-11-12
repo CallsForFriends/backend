@@ -1,5 +1,6 @@
 package ru.itmo.calls.adapter.api
 
+import api.myitmo.MyItmo
 import api.myitmo.model.ResultResponse
 import api.myitmo.model.personality.Personality
 import api.myitmo.model.personality.PersonalityMin
@@ -49,6 +50,15 @@ class MyItmoAdapter(
         }
 
         return result?.data?.map { it.toUserInfo() } ?: emptyList()
+    }
+
+    @Deprecated(message = "remove after parsing token implementation")
+    override fun getUserInfo(id: Int, customMyItmo: MyItmo): UserInfo {
+        val result = executeRequest {
+            customMyItmo.api().getPersonality(id)
+        }
+
+        return result?.toUserInfo() ?: throw UserNotFoundException.forUserId(id)
     }
 
     private fun <T> executeRequest(requestProvider: () -> Call<ResultResponse<T>>): T? {

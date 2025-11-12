@@ -1,6 +1,7 @@
 package ru.itmo.calls.adapter.security
 
 import api.myitmo.MyItmo
+import mu.KotlinLogging
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Service
@@ -13,6 +14,7 @@ class MyItmoAuthAdapter(
     private val myItmoProvider: ObjectProvider<MyItmo>,
     private val tokenService: TokenService
 ): AuthProvider {
+    private val log = KotlinLogging.logger { }
     private val myItmoCache: MutableMap<String, MyItmo> = ConcurrentHashMap()
 
     override fun createMyItmo(): MyItmo {
@@ -20,13 +22,12 @@ class MyItmoAuthAdapter(
     }
 
     override fun login(username: String, password: String): Boolean {
-        return try {
-            // Создаем новый экземпляр MyItmo для проверки
+        return runCatching {
             val createdMyItmo = createMyItmo()
-            // Используем auth() для проверки, как указано в требованиях
             createdMyItmo.auth(username, password)
             true
-        } catch (e: Exception) {
+        }.getOrElse {
+            log.error(it) { "Failed to login. Reason: ${it.message}" }
             false
         }
     }

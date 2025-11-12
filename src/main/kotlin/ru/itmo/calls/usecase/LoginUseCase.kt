@@ -4,8 +4,9 @@ import mu.KotlinLogging
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
+import ru.itmo.calls.config.dto.ItmoIdDto
 import ru.itmo.calls.port.AuthProvider
-import ru.itmo.calls.port.UserInfoProvider
+import ru.itmo.calls.service.JwtParsingService
 import ru.itmo.calls.service.TokenService
 import ru.itmo.calls.usecase.model.LoginCommand
 import ru.itmo.calls.usecase.model.LoginResult
@@ -13,8 +14,8 @@ import ru.itmo.calls.usecase.model.LoginResult
 @Service
 class LoginUseCase(
     private val authProvider: AuthProvider,
-    private val userInfoProvider: UserInfoProvider,
-    private val tokenService: TokenService
+    private val tokenService: TokenService,
+    private val jwtParsingService: JwtParsingService
 ) {
     private val log = KotlinLogging.logger { }
 
@@ -26,9 +27,9 @@ class LoginUseCase(
             throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials")
         }
 
-        // Получаем userId после успешной аутентификации
-        val userId = getUserIdAfterLogin(command.login, command.password)
-            ?: throw ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to get user ID")
+        // Получаем информацию о пользователе после успешной аутентификации
+        val userInfo = getUserInfoAfterLogin(command.login, command.password)
+            ?: throw ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to get user info")
 
         // Проверяем, есть ли уже токен для этого пользователя
         val existingToken = tokenService.findTokenByLogin(command.login)
@@ -39,13 +40,13 @@ class LoginUseCase(
             if (tokenInfo != null) {
                 // Обновляем пароль и userId в существующем токене
                 tokenInfo.password = password
-                tokenInfo.userId = userId
+                tokenInfo.userId = userInfo.id
             }
             existingToken
         } else {
             // Если токена нет, создаем новый
             tokenService.generateToken(
-                userId = userId,
+                user = userInfo,
                 login = login,
                 password = password
             )
@@ -54,15 +55,13 @@ class LoginUseCase(
         return LoginResult(token)
     }
 
-
-    fun getUserIdAfterLogin(username: String, password: String): Int? {
+    private fun getUserInfoAfterLogin(username: String, password: String): ItmoIdDto? {
         return runCatching {
             val loggedMyItmo = authProvider.createMyItmo()
             loggedMyItmo.auth(username, password)
-
-            return userInfoProvider.getUserInfo(username.toInt(), loggedMyItmo).userId.toInt()
+            return jwtParsingService.parseItmoIdFromJwt(loggedMyItmo.storage.idToken)
         }.onFailure {
-            log.error(it) { "[LOGIN] Failed to get user ID after login. Reason: ${it.message}" }
+            log.error(it) { "[LOGIN] Failed to get user info after login. Reason: ${it.message}" }
         }.getOrNull()
     }
 }

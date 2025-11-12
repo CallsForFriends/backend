@@ -18,9 +18,7 @@ class SecurityAdapter : AuthDataProvider {
                 principal.userId
             }
 
-            else -> {
-                throw IllegalStateException("Unexpected principal type: ${principal::class.java.name}")
-            }
+            else -> throw IllegalStateException("Unexpected principal type: ${principal::class.java.name}")
         }
     }
 }

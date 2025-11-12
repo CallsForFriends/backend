@@ -5,7 +5,7 @@ import api.myitmo.MyItmo
 interface AuthProvider {
     fun createMyItmo(): MyItmo
 
-    fun login(username: String, password: String): Boolean
+    fun getIdToken(username: String, password: String): String?
 
     fun removeMyItmo(token: String)
 

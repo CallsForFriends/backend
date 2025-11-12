@@ -1,10 +1,8 @@
 package ru.itmo.calls.service.dto
 
-import com.fasterxml.jackson.annotation.JsonProperty
 import ru.itmo.calls.config.dto.ItmoIdDto
 
 data class JwtPayloadDto(
-    @JsonProperty("isu")
     val isu: Int?,
     val name: String?,
     val groups: List<GroupDto>?,

@@ -8,8 +8,10 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import ru.itmo.calls.controller.rest.user.mapping.toResponse
+import ru.itmo.calls.controller.rest.user.models.FindCurrentUserResponse
 import ru.itmo.calls.controller.rest.user.models.FindUserByIdResponse
 import ru.itmo.calls.controller.rest.user.models.FindUsersByFilterResponse
+import ru.itmo.calls.usecase.FindCurrentUserUseCase
 import ru.itmo.calls.usecase.FindUserByIdUseCase
 import ru.itmo.calls.usecase.FindUsersByFilterUseCase
 import ru.itmo.calls.usecase.model.FindUserByIdCommand
@@ -19,13 +21,20 @@ import ru.itmo.calls.usecase.model.FindUsersByFilterCommand
 @RequestMapping("/api/v1/users")
 class UserController(
     private val findUserByIdUseCase: FindUserByIdUseCase,
-    private val findUsersByFilterUseCase: FindUsersByFilterUseCase
+    private val findUsersByFilterUseCase: FindUsersByFilterUseCase,
+    private val findCurrentUserUseCase: FindCurrentUserUseCase
 ) {
     @GetMapping("/{id}")
     fun findById(@PathVariable id: Int): FindUserByIdResponse {
         val command = FindUserByIdCommand(id)
         return findUserByIdUseCase.find(command).toResponse()
     }
+
+    @GetMapping("/me")
+    fun findCurrentUser(): FindCurrentUserResponse {
+        return findCurrentUserUseCase.find().toResponse()
+    }
+
 
     @GetMapping
     fun findByFilter(

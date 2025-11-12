@@ -2,10 +2,10 @@ package ru.itmo.calls.adapter.security
 
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Service
-import ru.itmo.calls.port.AuthProvider
+import ru.itmo.calls.port.AuthDataProvider
 
 @Service
-class SecurityAdapter : AuthProvider {
+class SecurityAdapter : AuthDataProvider {
     override fun getCurrentUserId(): Int {
         val authentication = SecurityContextHolder.getContext().authentication
         if (authentication == null || authentication.principal == null) {

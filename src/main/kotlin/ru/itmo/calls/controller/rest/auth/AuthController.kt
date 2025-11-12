@@ -1,25 +1,27 @@
 package ru.itmo.calls.controller.rest.auth
 
+import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import jakarta.validation.Valid
 import org.springframework.http.HttpHeaders
-import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseCookie
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
-import org.springframework.web.server.ResponseStatusException
-import ru.itmo.calls.adapter.api.MyItmoAdapter
+import ru.itmo.calls.controller.rest.auth.mapping.toResponse
 import ru.itmo.calls.controller.rest.auth.model.LoginRequest
 import ru.itmo.calls.controller.rest.auth.model.LoginResponse
-import ru.itmo.calls.service.TokenService
+import ru.itmo.calls.usecase.LoginUseCase
+import ru.itmo.calls.usecase.LogoutUseCase
+import ru.itmo.calls.usecase.model.LoginCommand
+import ru.itmo.calls.usecase.model.LogoutCommand
 
 @RestController
 @RequestMapping("/api/v1/auth")
 class AuthController(
-    private val itmoAdapter: MyItmoAdapter,
-    private val tokenService: TokenService
+    private val loginUseCase: LoginUseCase,
+    private val logoutUseCase: LogoutUseCase
 ) {
     companion object {
         private const val TOKEN_COOKIE_NAME = "AUTH_TOKEN"
@@ -31,40 +33,12 @@ class AuthController(
         @RequestBody @Valid request: LoginRequest,
         response: HttpServletResponse
     ): LoginResponse {
-        // Проверяем через myItmo.auth
-        val authResult = itmoAdapter.login(request.login, request.password)
-
-        if (!authResult) {
-            throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials")
-        }
-
-        // Получаем userId после успешной аутентификации
-        val userId = itmoAdapter.getUserIdAfterLogin(request.login, request.password)
-            ?: throw ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to get user ID")
-
-        // Проверяем, есть ли уже токен для этого пользователя
-        val existingToken = tokenService.findTokenByLogin(request.login)
-
-        val token = if (existingToken != null) {
-            // Если токен уже существует, обновляем пароль и userId (на случай если они изменились)
-            val tokenInfo = tokenService.getTokenInfo(existingToken)
-            if (tokenInfo != null) {
-                // Обновляем пароль и userId в существующем токене
-                tokenInfo.password = request.password
-                tokenInfo.userId = userId
-            }
-            existingToken
-        } else {
-            // Если токена нет, создаем новый
-            tokenService.generateToken(
-                userId = userId,
-                login = request.login,
-                password = request.password
-            )
-        }
+        val result = loginUseCase.login(
+            LoginCommand(login = request.login, password = request.password),
+        )
 
         // Сохраняем токен в cookie используя ResponseCookie для лучшей совместимости
-        val cookie = ResponseCookie.from(TOKEN_COOKIE_NAME, token)
+        val cookie = ResponseCookie.from(TOKEN_COOKIE_NAME, result.token)
             .path("/")
             .maxAge(MAX_AGE_SECONDS.toLong())
             .httpOnly(true)
@@ -73,24 +47,19 @@ class AuthController(
             .build()
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString())
 
-        return LoginResponse(
-            authToken = token
-        )
+        return result.toResponse()
     }
 
     @PostMapping("/logout")
     fun logout(
-        request: jakarta.servlet.http.HttpServletRequest,
+        request: HttpServletRequest,
         response: HttpServletResponse
     ) {
         // Получаем токен из cookie или заголовка
         val token = extractToken(request)
 
         if (token != null) {
-            // Удаляем токен из системы
-            tokenService.removeToken(token)
-            // Удаляем кэшированный MyItmo экземпляр
-            itmoAdapter.removeMyItmo(token)
+            logoutUseCase.logout(LogoutCommand(token))
         }
 
         // Удаляем cookie
@@ -104,7 +73,7 @@ class AuthController(
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString())
     }
 
-    private fun extractToken(request: jakarta.servlet.http.HttpServletRequest): String? {
+    private fun extractToken(request: HttpServletRequest): String? {
         // Проверяем заголовок Authorization
         val bearerToken = request.getHeader("Authorization")
         if (bearerToken != null && bearerToken.startsWith("Bearer ")) {

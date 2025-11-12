@@ -1,5 +1,13 @@
 package ru.itmo.calls.port
 
+import api.myitmo.MyItmo
+
 interface AuthProvider {
-    fun getCurrentUserId(): Int
+    fun createMyItmo(): MyItmo
+
+    fun login(username: String, password: String): Boolean
+
+    fun removeMyItmo(token: String)
+
+    fun getAuthenticatedMyItmo(): MyItmo
 }

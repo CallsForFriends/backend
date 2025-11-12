@@ -21,18 +21,15 @@ class TokenAuthenticationFilter(
         response: HttpServletResponse,
         filterChain: FilterChain
     ) {
-        // Очищаем SecurityContext перед проверкой токена
-        SecurityContextHolder.clearContext()
 
         val token = extractToken(request)
-
         if (token != null) {
             val tokenInfo = tokenService.validateToken(token)
             if (tokenInfo != null) {
                 val authorities = listOf(SimpleGrantedAuthority("ROLE_USER"))
                 val authentication = UsernamePasswordAuthenticationToken(
-                    tokenInfo.userId, // Сохраняем userId в principal для использования в SecurityAdapter
-                    token, // Сохраняем токен в credentials для последующего использования
+                    tokenInfo,
+                    token,
                     authorities
                 ).apply {
                     details = WebAuthenticationDetailsSource().buildDetails(request)
@@ -49,12 +46,6 @@ class TokenAuthenticationFilter(
     }
 
     private fun extractToken(request: HttpServletRequest): String? {
-        // Сначала проверяем заголовок Authorization (для обратной совместимости)
-        val bearerToken = request.getHeader("Authorization")
-        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
-            return bearerToken.substring(7)
-        }
-
         // Затем проверяем cookie
         val cookies = request.cookies
         if (cookies != null) {

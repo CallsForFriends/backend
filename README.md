@@ -2,6 +2,9 @@
 
 Backend-приложение для работы с пользователями и избранными пользователями, построенное на Spring Boot и Kotlin.
 
+## Ссылка на презентацию 
+https://docs.google.com/presentation/d/1K9Tlckyxu5DInXLkOtM3jBE5iWUZnK-LRGMCATfO5Wg/edit?usp=sharing
+
 ## Технологический стек
 
 - **Kotlin** 1.9.25

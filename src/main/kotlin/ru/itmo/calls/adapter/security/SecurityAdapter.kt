@@ -3,6 +3,7 @@ package ru.itmo.calls.adapter.security
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Service
 import ru.itmo.calls.port.AuthDataProvider
+import ru.itmo.calls.service.TokenService
 
 @Service
 class SecurityAdapter : AuthDataProvider {
@@ -13,8 +14,10 @@ class SecurityAdapter : AuthDataProvider {
         }
 
         return when (val principal = authentication.principal) {
-            is Int -> principal
-            is Number -> principal.toInt()
+            is TokenService.TokenInfo -> {
+                principal.userId
+            }
+
             else -> throw IllegalStateException("Unexpected principal type: ${principal::class.java.name}")
         }
     }

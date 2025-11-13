@@ -13,7 +13,7 @@ import java.util.concurrent.ConcurrentHashMap
 class MyItmoAuthAdapter(
     private val myItmoProvider: ObjectProvider<MyItmo>,
     private val tokenService: TokenService
-): AuthProvider {
+) : AuthProvider {
     private val log = KotlinLogging.logger { }
     private val myItmoCache: MutableMap<String, MyItmo> = ConcurrentHashMap()
 
@@ -21,15 +21,10 @@ class MyItmoAuthAdapter(
         return myItmoProvider.getObject()
     }
 
-    override fun login(username: String, password: String): Boolean {
-        return runCatching {
-            val createdMyItmo = createMyItmo()
-            createdMyItmo.auth(username, password)
-            true
-        }.getOrElse {
-            log.error(it) { "Failed to login. Reason: ${it.message}" }
-            false
-        }
+    override fun getIdToken(username: String, password: String): String? {
+        val createdMyItmo = createMyItmo()
+        createdMyItmo.auth(username, password)
+        return createdMyItmo.storage?.idToken;
     }
 
     override fun removeMyItmo(token: String) {

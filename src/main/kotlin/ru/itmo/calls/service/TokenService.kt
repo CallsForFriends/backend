@@ -1,6 +1,7 @@
 package ru.itmo.calls.service
 
 import org.springframework.stereotype.Service
+import ru.itmo.calls.config.dto.ItmoIdDto
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
@@ -11,15 +12,15 @@ class TokenService {
     data class TokenInfo(
         var userId: Int,
         val login: String,
-        var password: String, // var для возможности обновления пароля
-        val createdAt: Long = System.currentTimeMillis(),
-        var lastAuthTime: Long? = null,
-        var refreshTokenExpiresAt: Long? = null
+        var password: String,
+        val name: String,
+        val groupName: String,
+        val pictureUrl: String
     )
 
-    fun generateToken(userId: Int, login: String, password: String): String {
+    fun generateToken(user: ItmoIdDto, login: String, password: String): String {
         val token = UUID.randomUUID().toString()
-        tokens[token] = TokenInfo(userId, login, password)
+        tokens[token] = TokenInfo(user.id, login, password, user.name, user.groupName, user.pictureUrl)
         return token
     }
 

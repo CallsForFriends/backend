@@ -16,12 +16,15 @@ class TokenAuthenticationFilter(
     private val tokenService: TokenService
 ) : OncePerRequestFilter() {
 
+    companion object {
+        private const val TOKEN_COOKIE_NAME = "AUTH_TOKEN"
+    }
+
     override fun doFilterInternal(
         request: HttpServletRequest,
         response: HttpServletResponse,
         filterChain: FilterChain
     ) {
-
         val token = extractToken(request)
         if (token != null) {
             val tokenInfo = tokenService.validateToken(token)
@@ -41,11 +44,12 @@ class TokenAuthenticationFilter(
         filterChain.doFilter(request, response)
     }
 
-    companion object {
-        private const val TOKEN_COOKIE_NAME = "AUTH_TOKEN"
-    }
-
     private fun extractToken(request: HttpServletRequest): String? {
+        val bearerToken = request.getHeader("Authorization")
+        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+            return bearerToken.substring(7)
+        }
+
         // Затем проверяем cookie
         val cookies = request.cookies
         if (cookies != null) {

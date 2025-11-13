@@ -9,8 +9,12 @@ class FindCurrentUserUseCase(
     private val authDataProvider: AuthDataProvider
 ) {
     fun find(): FindCurrentUserResult {
+        val currentUser = authDataProvider.getCurrentUserInfo()
         return FindCurrentUserResult(
-            id = authDataProvider.getCurrentUserId()
+            id = currentUser.userId,
+            name = currentUser.name,
+            group = currentUser.groupName,
+            photoUrl = currentUser.pictureUrl
         )
     }
 }

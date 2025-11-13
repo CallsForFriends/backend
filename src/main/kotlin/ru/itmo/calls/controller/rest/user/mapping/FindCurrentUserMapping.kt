@@ -8,6 +8,9 @@ fun FindCurrentUserResult.toResponse(): FindCurrentUserResponse {
     return FindCurrentUserResponse(
         user = ExtendedUserInfoDto(
             id = id,
+            name = name,
+            group = group,
+            photoUrl = photoUrl,
         )
     )
 }
